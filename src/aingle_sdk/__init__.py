@@ -1,21 +1,54 @@
 """
-AIngle SDK for Python
+AIngle SDK for Python.
 
-Official Python SDK for AIngle - the ultra-light distributed ledger for IoT devices.
+An HTTP client for the AIngle Cortex REST API, the verifiable memory cortex for
+AI agents.
 """
 
-from .client import AIngleClient, AIngleClientConfig
-from .types import Entry, EntryHash, NodeInfo, PeerInfo, AIngleError, ErrorCode
+from .client import AIngleClient
+from .types import (
+    AIngleError,
+    BatchInsertResult,
+    ComponentHealth,
+    CreateTriple,
+    GraphStats,
+    Health,
+    HealthComponents,
+    MemoryStats,
+    PredicatesResult,
+    QueryResult,
+    RecallResult,
+    RememberResponse,
+    ServerStats,
+    Stats,
+    SubjectsResult,
+    Triple,
+    TripleList,
+    Value,
+    node_ref,
+)
 from .version import __version__
 
 __all__ = [
     "AIngleClient",
-    "AIngleClientConfig",
-    "Entry",
-    "EntryHash",
-    "NodeInfo",
-    "PeerInfo",
     "AIngleError",
-    "ErrorCode",
+    "BatchInsertResult",
+    "ComponentHealth",
+    "CreateTriple",
+    "GraphStats",
+    "Health",
+    "HealthComponents",
+    "MemoryStats",
+    "PredicatesResult",
+    "QueryResult",
+    "RecallResult",
+    "RememberResponse",
+    "ServerStats",
+    "Stats",
+    "SubjectsResult",
+    "Triple",
+    "TripleList",
+    "Value",
+    "node_ref",
     "__version__",
 ]
