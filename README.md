@@ -1,6 +1,9 @@
 # AIngle SDK for Python
 
-Official Python SDK for [AIngle](https://apilium.com) - the ultra-light distributed ledger for IoT devices.
+Python SDK for [AIngle](https://apilium.com), the verifiable memory cortex for
+AI agents. AIngle Cortex is a semantic graph plus vector memory served over a
+REST API, so your agents can remember, recall, and reason over durable,
+queryable knowledge.
 
 ## Installation
 
@@ -11,104 +14,122 @@ pip install aingle-sdk
 ## Quick Start
 
 ```python
-import asyncio
 from aingle_sdk import AIngleClient
 
-async def main():
-    async with AIngleClient(node_url="http://localhost:8080") as client:
-        # Create an entry
-        hash = await client.create_entry({
-            "type": "sensor_reading",
-            "value": 23.5,
-            "unit": "celsius",
-        })
-        print(f"Created entry: {hash}")
+client = AIngleClient()  # defaults to http://127.0.0.1:19090
 
-        # Retrieve an entry
-        entry = await client.get_entry(hash)
-        print(entry)
+# Remember a note.
+saved = client.remember(
+    "note",
+    {"text": "Ada prefers dark roast coffee"},
+    tags=["preference"],
+    importance=0.7,
+)
+print("stored id:", saved.id)
 
-        # Get node info
-        info = await client.get_node_info()
-        print(f"Node version: {info.version}")
-
-asyncio.run(main())
+# Recall it later by semantic text.
+hits = client.recall(text="what coffee does Ada like?", limit=5)
+for hit in hits:
+    print(hit.relevance, hit.data)
 ```
 
-## Subscribe to Real-time Updates
+## Configuration
+
+| Parameter  | Type            | Default                     | Description                          |
+|------------|-----------------|-----------------------------|--------------------------------------|
+| `base_url` | `str`           | `http://127.0.0.1:19090`    | AIngle Cortex base URL.              |
+| `token`    | `str` or `None` | `None`                      | Optional bearer token for a namespace. |
+| `timeout`  | `float`         | `30.0`                      | Request timeout in seconds.          |
+
+Pass a token when a namespace requires authentication:
 
 ```python
-import asyncio
-from aingle_sdk import AIngleClient
-
-async def main():
-    client = AIngleClient()
-    await client.connect()
-
-    def on_entry(entry):
-        print(f"New entry: {entry.hash}")
-
-    unsubscribe = await client.subscribe(on_entry)
-
-    # Keep running for 60 seconds
-    await asyncio.sleep(60)
-
-    unsubscribe()
-    await client.disconnect()
-
-asyncio.run(main())
+client = AIngleClient(base_url="https://cortex.example.com", token="my-token")
 ```
 
 ## API Reference
 
-### AIngleClient
+All methods are synchronous and raise `AIngleError(status, message)` on any
+non-2xx response.
 
-| Method | Description |
-|--------|-------------|
-| `connect()` | Connect to the AIngle node |
-| `disconnect()` | Disconnect from the node |
-| `create_entry(data)` | Create a new entry |
-| `get_entry(hash)` | Retrieve an entry by hash |
-| `get_node_info()` | Get node information |
-| `subscribe(callback)` | Subscribe to real-time updates |
+### Health and stats
 
-### Configuration
+| Method           | Description                            |
+|------------------|----------------------------------------|
+| `health()`       | Service health and component status.   |
+| `stats()`        | Graph and server statistics.           |
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `node_url` | `str` | `http://localhost:8080` | Node URL |
-| `ws_url` | `str` | `ws://localhost:8081` | WebSocket URL |
-| `timeout` | `float` | `30.0` | Request timeout (seconds) |
-| `debug` | `bool` | `False` | Enable debug logging |
+### Memory
+
+| Method                                                  | Description                              |
+|---------------------------------------------------------|------------------------------------------|
+| `remember(entry_type, data, *, tags, importance, embedding)` | Store a memory, returns `{ id }`.   |
+| `recall(*, text, tags, entry_type, min_importance, limit)`   | Recall memories by text or tags.    |
+| `search(*, embedding, k, min_similarity, entry_type, tags)`  | Vector / semantic search.           |
+| `memory_stats()`                                        | Short and long term memory counts.       |
+| `forget(id)`                                            | Delete a memory by id.                   |
+
+### Triples (semantic graph)
+
+The triple `object` is an untagged value: `str`, `int`, `float`, `bool`, or a
+node reference `{"node": "http://example.org/thing"}`. Use the `node_ref`
+helper to build a node reference.
+
+```python
+from aingle_sdk import node_ref
+
+client.create_triple("ada", "likes", "coffee")
+client.create_triple("ada", "knows", node_ref("http://example.org/grace"))
+```
+
+| Method                                                       | Description                       |
+|--------------------------------------------------------------|-----------------------------------|
+| `create_triple(subject, predicate, object)`                  | Insert one triple.                |
+| `list_triples(*, subject, predicate, object, limit, offset)` | List triples with filters.        |
+| `get_triple(id)`                                             | Fetch a triple by id.             |
+| `delete_triple(id)`                                          | Delete a triple by id.            |
+
+### Query
+
+| Method                                          | Description                          |
+|-------------------------------------------------|--------------------------------------|
+| `query(*, subject, predicate, object, limit)`   | Pattern match over triples.          |
+| `subjects(*, predicate, limit)`                 | Distinct subjects, optional filter.  |
+| `predicates(*, subject, limit)`                 | Distinct predicates, optional filter. |
+
+## Error handling
+
+```python
+from aingle_sdk import AIngleClient, AIngleError
+
+client = AIngleClient()
+try:
+    client.get_triple("does-not-exist")
+except AIngleError as err:
+    print(err.status, err.message)
+```
 
 ## Development
 
 ```bash
-# Install dev dependencies
+# Install dev dependencies.
 pip install -e ".[dev]"
 
-# Run tests
+# Run tests.
 pytest
 
-# Run tests with coverage
-pytest --cov=aingle_sdk
-
-# Type checking
+# Type checking.
 mypy src
 
-# Linting
+# Linting.
 ruff check src
-
-# Format code
-black src
 ```
 
 ## License
 
-Apache-2.0 - see [LICENSE](LICENSE)
+Apache-2.0, see [LICENSE](LICENSE).
 
 ## Links
 
 - [AIngle Core](https://github.com/ApiliumCode/aingle)
 - [Documentation](https://docs.apilium.com)
-- [Discord](https://discord.gg/apilium)
